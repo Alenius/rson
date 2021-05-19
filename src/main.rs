@@ -20,6 +20,7 @@ fn tokenizer(json_as_string: String) -> Vec<String> {
                     open_quote = true;
                 }
             }
+            // if the string is open, everything is part of that string so just push it
             new_char if open_quote => {
                 current_word.push(new_char);
             }
@@ -28,6 +29,15 @@ fn tokenizer(json_as_string: String) -> Vec<String> {
                     open_digit = true;
                 }
                 current_word.push(digit);
+            }
+            // TODO: this can probably be done better
+            // since strings must be inside quotes, letters here must be part of boolean
+            bool_char if json_char.is_ascii_alphabetic() => {
+                current_word.push(bool_char);
+                if current_word == "true" || current_word == "false" {
+                    word_arr.push(current_word);
+                    current_word = String::new();
+                }
             }
             // separator is either , ] in array or } if it's last in object depending on position within the array
             separator if open_digit => {
