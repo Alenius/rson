@@ -1,6 +1,10 @@
 use std::fs;
+use std::collections::HashMap;
 
-fn tokenizer(json_as_string: String) -> Vec<String> {
+// TODO: maybe redo implementation and save quotes? 
+// this makes it easier to check if the value is string or something else
+// in the lexer
+fn lexer(json_as_string: String) -> Vec<String> {
     let mut word_arr: Vec<String> = vec![];
     let mut current_word = String::new();
     let mut open_quote = false;
@@ -57,10 +61,65 @@ fn tokenizer(json_as_string: String) -> Vec<String> {
 
 }
 
+// only implement arrs with mixed strings, arr and bool for now.
+// that means no nested arrays or objects.
+#[derive(Debug)]
+enum VecValue {
+    String(String),
+    Num(u32),
+    Bool(bool)
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+enum JsonValue<'a> {
+    String(&'a str),
+    Vec(Vec<VecValue>),
+    Bool(bool),
+    Object(HashMap<&'a String, u32>)
+}
+
+fn check_if_string_is_numeric(string: &str) -> bool {
+    return false;
+}
+
+fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a> > {
+    let mut json_object: HashMap<String, JsonValue> = HashMap::new();
+
+    let mut current_key: String = String::new();
+    let mut current_value: JsonValue;
+    let mut is_array: bool = false;
+
+    for token in lexed_json {
+        println!("{:?}", token);
+        match token.as_str() {
+            "{" | ":" => (),
+            _ if current_key.is_empty() => {
+                current_key = token;
+            }
+            "[" => {
+                is_array = true
+            }
+            elem if is_array => {
+                let is_numeric = check_if_string_is_numeric(elem);
+                if (is_numeric)
+                current_value(Vec)
+            }
+            _ => {
+                json_object.insert(token, JsonValue::String("Hej"));
+            }
+        }
+    }
+
+    return json_object
+}
+
 fn main() {
-    let json_content = fs::read_to_string("./test_files/1.json")
+    let json_content = fs::read_to_string("./test_files/2.json")
         .expect("Something went wrong when reading the file");
 
-    let tokens = tokenizer(json_content);
-    println!("{:?}", tokens);
+    let tokens = lexer(json_content);
+    // println!("{:?}", tokens);
+    let json_object = parser(tokens);
+    println!("{:?}", json_object)
 }
