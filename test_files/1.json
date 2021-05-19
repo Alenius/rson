@@ -3,6 +3,7 @@
   "string_with_number": "l33t",
   "array": [1, 2, 3, 44, 5555],
   "boolean": true,
+  "false_bool": false,
   "number": 1234,
   "object": {
     "object_str": "str",
