@@ -1,27 +1,31 @@
-use std::fs;
 use std::collections::HashMap;
+use std::{fs, vec};
 
-// TODO: maybe redo implementation and save quotes? 
+// TODO: maybe redo implementation and save quotes?
 // this makes it easier to check if the value is string or something else
-// in the lexer
+// in the parser
 fn lexer(json_as_string: String) -> Vec<String> {
     let mut word_arr: Vec<String> = vec![];
     let mut current_word = String::new();
     let mut open_quote = false;
     let mut open_digit = false;
-    
+
     // TODO: handle booleans
     for json_char in json_as_string.chars() {
         match json_char {
-            '\n' | ' '  => (),
+            '\n' | ' ' => (),
             '\"' => {
                 if open_quote {
+                    current_word.push('\"');
                     word_arr.push(current_word);
                     current_word = String::new();
                     open_quote = false;
                 } else {
                     // opening the word for writing
                     open_quote = true;
+                    // save the quote for the string, makes it easier
+                    // to identify as string
+                    current_word.push('\"')
                 }
             }
             // if the string is open, everything is part of that string so just push it
@@ -58,60 +62,113 @@ fn lexer(json_as_string: String) -> Vec<String> {
     }
 
     return word_arr;
-
-}
-
-// only implement arrs with mixed strings, arr and bool for now.
-// that means no nested arrays or objects.
-#[derive(Debug)]
-enum VecValue {
-    String(String),
-    Num(u32),
-    Bool(bool)
 }
 
 #[allow(dead_code)]
 #[derive(Debug)]
 enum JsonValue<'a> {
-    String(&'a str),
-    Vec(Vec<VecValue>),
+    String(String),
+    Num(u32),
+    Vec(Vec<JsonValue<'a>>), // ok so this works! self referencing
     Bool(bool),
-    Object(HashMap<&'a String, u32>)
+    Object(HashMap<&'a String, u32>),
 }
 
 fn check_if_string_is_numeric(string: &str) -> bool {
-    return false;
+    for char in string.chars() {
+        if !char.is_numeric() {
+            return false;
+        }
+    }
+    return true;
 }
 
-fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a> > {
+// a string will guaranteed start and end with quotes
+fn strip_quotes(string: String) -> String {
+    let mut stripped_string = string.clone();
+    println!("STRIPPED {:?}", string);
+    stripped_string.pop(); // remove last
+    stripped_string.remove(0); // remove first char
+
+    return stripped_string;
+}
+
+fn from_str_to_bool(token: String) -> bool {
+    let boolean: bool;
+    if token == "true" {
+        boolean = true;
+    } else if token == "false" {
+        boolean = false;
+    } else {
+        panic!("Boolean is not true or false");
+    }
+    return boolean;
+}
+
+fn typify_token(token: String) -> JsonValue<'static> {
+    let first_char = token.chars().next().unwrap();
+
+    // how to handle arrays and objects?
+    match first_char {
+        '\"' => {
+            let stripped_token = strip_quotes(token);
+            return JsonValue::String(stripped_token);
+        }
+        _ if first_char.is_alphabetic() => {
+            let boolean = from_str_to_bool(token);
+            return JsonValue::Bool(boolean);
+        }
+        _ if first_char.is_numeric() => {
+            // does this work for negative numbers?
+            return JsonValue::Num(first_char.to_digit(10).unwrap());
+        }
+        _ => panic!("Unknown token type"),
+    }
+}
+
+fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
     let mut json_object: HashMap<String, JsonValue> = HashMap::new();
 
     let mut current_key: String = String::new();
     let mut current_value: JsonValue;
+    let mut current_arr: Vec<JsonValue>;
     let mut is_array: bool = false;
 
     for token in lexed_json {
         println!("{:?}", token);
         match token.as_str() {
-            "{" | ":" => (),
+            "{" | ":" | "," => (),
             _ if current_key.is_empty() => {
-                current_key = token;
+                let stripped_token = strip_quotes(token);
+                current_key = stripped_token;
             }
             "[" => {
-                is_array = true
+                is_array = true;
+                current_arr = vec![];
+            }
+            "]" if is_array => {
+                is_array = false;
+                json_object.insert(current_key, JsonValue::Vec(current_arr));
+                current_arr = vec![];
+            }
+            // it's a string, just pushing the entire thing should be fine
+            _ if token.chars().next().unwrap() == '\"' => {
+                current_value = JsonValue::String(String::from(&token.clone()));
+                println!("{:?}", current_value);
+                json_object.insert(current_key, current_value);
+                current_key = String::new();
+                // possible to reinitialize the current_value?
             }
             elem if is_array => {
-                let is_numeric = check_if_string_is_numeric(elem);
-                if (is_numeric)
-                current_value(Vec)
+                current_arr.push(token);
             }
             _ => {
-                json_object.insert(token, JsonValue::String("Hej"));
+                ();
             }
         }
     }
 
-    return json_object
+    return json_object;
 }
 
 fn main() {
