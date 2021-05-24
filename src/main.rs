@@ -129,38 +129,55 @@ fn typify_token(token: String) -> JsonValue<'static> {
 fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
     let mut json_object: HashMap<String, JsonValue> = HashMap::new();
 
-    let mut current_key: String = String::new();
-    let mut current_value: JsonValue;
-    let mut current_arr: Vec<JsonValue>;
-    let mut is_array: bool = false;
+    let mut key: Option<String> = None;
+    let mut value: Option<JsonValue>;
+    let mut temp_arr: Option<Vec<JsonValue>> = None; // holds arr while building it 
 
     for token in lexed_json {
         println!("{:?}", token);
+        let is_building_arr = temp_arr.is_some();
+
         match token.as_str() {
             "{" | ":" | "," => (),
-            _ if current_key.is_empty() => {
+            // what proper token that comes when the key is none must be new key 
+            _ if key.is_none() => {
                 let stripped_token = strip_quotes(token);
-                current_key = stripped_token;
+                key = Some(stripped_token);
             }
+            // initialize array building
             "[" => {
-                is_array = true;
-                current_arr = vec![];
+                temp_arr = Some(vec![]);
             }
-            "]" if is_array => {
-                is_array = false;
-                json_object.insert(current_key, JsonValue::Vec(current_arr));
-                current_arr = vec![];
+            // handle array building
+            elem if is_building_arr => {
+                match elem {
+                    // handle closing of array
+                    "]" => {
+                        if let Some(key) = key {
+                        json_object.insert(key, JsonValue::Vec(temp_arr.unwrap()));
+                        temp_arr = None;
+                        } else {
+                            panic!("Trying to push array without key initialized");
+                        }
+                    }
+                    _ => {
+                        let typed_token = typify_token(elem.to_string());
+                        temp_arr.unwrap().push(typed_token);
+                    }
+                }
             }
             // it's a string, just pushing the entire thing should be fine
             _ if token.chars().next().unwrap() == '\"' => {
-                current_value = JsonValue::String(String::from(&token.clone()));
-                println!("{:?}", current_value);
-                json_object.insert(current_key, current_value);
-                current_key = String::new();
-                // possible to reinitialize the current_value?
-            }
-            elem if is_array => {
-                current_arr.push(token);
+                if let Some(key) = key {
+
+                let token_as_json_value = JsonValue::String(token);
+                json_object.insert(key, token_as_json_value);
+                } else {
+                    panic!("Trying to push array without key initialized");
+                }
+
+                // reset key
+                key = None;
             }
             _ => {
                 ();
