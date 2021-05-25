@@ -32,7 +32,8 @@ fn lexer(json_as_string: String) -> Vec<String> {
             new_char if open_quote => {
                 current_word.push(new_char);
             }
-            digit if json_char.is_numeric() => {
+            // check if number or start of a negative number
+            digit if json_char.is_numeric() || json_char == '-' => {
                 if !open_digit {
                     open_digit = true;
                 }
@@ -68,7 +69,7 @@ fn lexer(json_as_string: String) -> Vec<String> {
 #[derive(Debug, Clone)]
 enum JsonValue<'a> {
     String(String),
-    Num(u32),
+    Num(f64),
     Vec(Vec<JsonValue<'a>>), // ok so this works! self referencing
     Bool(bool),
     Object(HashMap<&'a String, u32>),
@@ -108,19 +109,23 @@ fn from_str_to_bool(token: String) -> bool {
 fn typify_token(token: String) -> JsonValue<'static> {
     let first_char = token.chars().next().unwrap();
 
+    // check if string
+    if first_char == '\"' {
+        let stripped_token = strip_quotes(token);
+        return JsonValue::String(stripped_token);
+    }
+
+    // check if number
+    if token.as_str().parse::<f64>().is_ok() {
+        let number = token.as_str().parse::<f64>().unwrap();
+        return JsonValue::Num(number);
+    }
+
     // how to handle arrays and objects?
-    match first_char {
-        '\"' => {
-            let stripped_token = strip_quotes(token);
-            return JsonValue::String(stripped_token);
-        }
-        _ if first_char.is_alphabetic() => {
+    match token.as_str() {
+        "true" | "false" => {
             let boolean = from_str_to_bool(token);
             return JsonValue::Bool(boolean);
-        }
-        _ if first_char.is_numeric() => {
-            // does this work for negative numbers?
-            return JsonValue::Num(first_char.to_digit(10).unwrap());
         }
         _ => panic!("Unknown token type, first_char: {}", first_char),
     }
@@ -130,13 +135,12 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
     let mut json_object: HashMap<String, JsonValue> = HashMap::new();
 
     let mut key: Option<String> = None;
-    let mut temp_arr: Option<Vec<JsonValue>> = None; // holds arr while building it 
+    let mut temp_arr: Option<Vec<JsonValue>> = None; // holds arr while building it
 
     for token in lexed_json {
-
         match token.as_str() {
-            "{" | ":" | "," => (),
-            // what proper token that comes when the key is none must be new key 
+            "{" | ":" | "," | "}" => (),
+            // what proper token that comes when the key is none must be new key
             _ if key.is_none() => {
                 let stripped_token = strip_quotes(token);
                 key = Some(stripped_token);
@@ -175,25 +179,34 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
                 if let Some(curr_key) = key.clone() {
                     let boolean = from_str_to_bool(token);
                     json_object.insert(curr_key, JsonValue::Bool(boolean));
+                    key = None;
                 } else {
                     panic!("Trying to push array without key initialized");
                 }
             }
             // it's a string, just pushing the entire thing should be fine
             _ if token.chars().next().unwrap() == '\"' => {
-                if let Some(key) = key {
-
-                let token_as_json_value = JsonValue::String(token);
-                json_object.insert(key, token_as_json_value);
+                if let Some(curr_key) = key.clone() {
+                    let token_as_json_value = JsonValue::String(token);
+                    json_object.insert(curr_key, token_as_json_value);
+                    key = None;
+                } else {
+                    panic!("Trying to push array without key initialized");
+                }
+            }
+            _ if token.parse::<f64>().is_ok() => {
+                if let Some(curr_key) = key.clone() {
+                    let token_as_json_value = typify_token(token.clone());
+                    json_object.insert(curr_key, token_as_json_value);
+                    key = None;
                 } else {
                     panic!("Trying to push array without key initialized");
                 }
 
-                // reset key
-                key = None;
             }
             _ => {
-                ();
+                println!("Something is unimplemented...");
+                key = None;
             }
         }
     }
