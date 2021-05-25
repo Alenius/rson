@@ -139,6 +139,9 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
 
     for token in lexed_json {
         match token.as_str() {
+            // TODO: break this out as a separate function and then use it 
+            // recursively for objects. 
+
             "{" | ":" | "," | "}" => (),
             // what proper token that comes when the key is none must be new key
             _ if key.is_none() => {
