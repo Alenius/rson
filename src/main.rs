@@ -65,7 +65,7 @@ fn lexer(json_as_string: String) -> Vec<String> {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum JsonValue<'a> {
     String(String),
     Num(u32),
@@ -122,7 +122,7 @@ fn typify_token(token: String) -> JsonValue<'static> {
             // does this work for negative numbers?
             return JsonValue::Num(first_char.to_digit(10).unwrap());
         }
-        _ => panic!("Unknown token type"),
+        _ => panic!("Unknown token type, first_char: {}", first_char),
     }
 }
 
@@ -130,12 +130,9 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
     let mut json_object: HashMap<String, JsonValue> = HashMap::new();
 
     let mut key: Option<String> = None;
-    let mut value: Option<JsonValue>;
     let mut temp_arr: Option<Vec<JsonValue>> = None; // holds arr while building it 
 
     for token in lexed_json {
-        println!("{:?}", token);
-        let is_building_arr = temp_arr.is_some();
 
         match token.as_str() {
             "{" | ":" | "," => (),
@@ -149,20 +146,27 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
                 temp_arr = Some(vec![]);
             }
             // handle array building
-            elem if is_building_arr => {
+            elem if temp_arr.is_some() => {
                 match elem {
                     // handle closing of array
                     "]" => {
-                        if let Some(key) = key {
-                        json_object.insert(key, JsonValue::Vec(temp_arr.unwrap()));
-                        temp_arr = None;
+                        if let Some(curr_key) = key.clone() {
+                            let cloned_arr = temp_arr.unwrap().clone();
+                            json_object.insert(curr_key, JsonValue::Vec(cloned_arr));
+                            temp_arr = None;
+                            key = None;
                         } else {
                             panic!("Trying to push array without key initialized");
                         }
                     }
                     _ => {
-                        let typed_token = typify_token(elem.to_string());
-                        temp_arr.unwrap().push(typed_token);
+                        if let Some(mut arr) = temp_arr {
+                            let typed_token = typify_token(elem.to_string());
+                            arr.push(typed_token);
+                            temp_arr = Some(arr);
+                        } else {
+                            panic!("Trying to push to unitialized array");
+                        }
                     }
                 }
             }
