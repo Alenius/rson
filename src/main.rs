@@ -170,6 +170,15 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
                     }
                 }
             }
+            // handle boolean
+            "true" | "false" => {
+                if let Some(curr_key) = key.clone() {
+                    let boolean = from_str_to_bool(token);
+                    json_object.insert(curr_key, JsonValue::Bool(boolean));
+                } else {
+                    panic!("Trying to push array without key initialized");
+                }
+            }
             // it's a string, just pushing the entire thing should be fine
             _ if token.chars().next().unwrap() == '\"' => {
                 if let Some(key) = key {
