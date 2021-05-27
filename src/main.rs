@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::slice::Iter;
 use std::{fs, vec};
 
 // TODO: maybe redo implementation and save quotes?
@@ -141,9 +142,8 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
 
     while let Some(token) = token_iter.next() {
         match token.as_str() {
-            // TODO: break this out as a separate function and then use it 
-            // recursively for objects. 
-
+            // TODO: break this out as a separate function and then use it
+            // recursively for objects.
             "{" | ":" | "," | "}" => (),
             // what proper token that comes when the key is none must be new key
             _ if key.is_none() => {
@@ -207,7 +207,6 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
                 } else {
                     panic!("Trying to push array without key initialized");
                 }
-
             }
             _ => {
                 println!("Something is unimplemented...");
@@ -219,12 +218,104 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
     return json_object;
 }
 
+// fn parse_vec(iter: Iter<String>) -> JsonValue<'static> {
+//     let mut arr: Vec<JsonValue> = vec![];
+//     // TODO: break this out to handle nested arrays
+//     while let Some(elem) = iter.next() {
+//         if elem.eq("]") {
+//             break;
+//         }
+//         if elem.eq(",") {
+//             continue;
+//         }
+//         // nested vec
+//         if elem.eq("[") {
+//             let parsed_vec = parse_vec(iter);
+//             arr.push(parsed_vec);
+//         }
+
+//         let typed_elem = typify_token(elem.to_owned());
+//         arr.push(typed_elem);
+//     }
+
+//     return JsonValue::Vec(arr);
+// }
+
+fn iter_parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
+    let mut lexed_json = lexed_json.clone();
+
+    let mut json_object: HashMap<String, JsonValue> = HashMap::new();
+    let mut token_iter = lexed_json.iter();
+
+    // creates key and value pair
+    while let Some(token) = token_iter.next() {
+        let key: String;
+        match token.as_str() {
+            "{" | "," | "}" => {
+                // the start/end brackets of an object
+                // or the comma separating the lines
+                continue;
+            }
+            _ => {
+                // double check that the key value actually is a string
+                if !token.as_str().starts_with("\"") {
+                    panic!("The key is not a string, it's: {}", token);
+                }
+
+                let stripped_token = strip_quotes(token.to_owned());
+                println!("stripped {}", stripped_token);
+                key = stripped_token;
+            }
+        }
+
+        if let Some(delimiter) = token_iter.next() {
+            if delimiter.ne(":") {
+                panic!("The delimiter is not a colon, it's: ${}", delimiter);
+            }
+        }
+
+        if let Some(token) = token_iter.next() {
+            // handle array
+            if token.eq("[") {
+                let mut arr: Vec<JsonValue> = vec![];
+                // TODO: break this out to handle nested arrays
+                while let Some(elem) = token_iter.next() {
+                    if elem.eq("]") {
+                        break;
+                    }
+                    if elem.eq(",") {
+                        continue;
+                    }
+                    // // nested vec
+                    // if elem.eq("[") {
+                    //     let parsed_vec = parse_vec(token_iter);
+                    //     arr.push(parsed_vec);
+                    // }
+            
+                    let typed_elem = typify_token(elem.to_owned());
+                    arr.push(typed_elem);
+                }
+            
+                json_object.insert(key.to_owned(), JsonValue::Vec(arr));
+                continue;
+            }
+
+            let value = typify_token(token.to_owned());
+            json_object.insert(key.to_owned(), value);
+        } else {
+            panic!("Created a key, but there is no value. Unbalanced JSON.")
+        }
+    }
+
+    return json_object;
+}
 fn main() {
     let json_content = fs::read_to_string("./test_files/2.json")
         .expect("Something went wrong when reading the file");
 
     let tokens = lexer(json_content);
     // println!("{:?}", tokens);
-    let json_object = parser(tokens);
+    // let json_object = parser(tokens);
+    let json_object = iter_parser(tokens);
     println!("{:?}", json_object)
 }
