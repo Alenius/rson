@@ -165,6 +165,7 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
     let mut json_object: HashMap<String, JsonValue> = HashMap::new();
     let mut token_iter = lexed_json.iter();
 
+    // TODO: Handle object. Break out this entire thing as a function should do it
     // creates key and value pair
     while let Some(token) = token_iter.next() {
         let key: String;
