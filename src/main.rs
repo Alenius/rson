@@ -132,117 +132,35 @@ fn typify_token(token: String) -> JsonValue<'static> {
     }
 }
 
-fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
-    let mut json_object: HashMap<String, JsonValue> = HashMap::new();
-
-    let mut key: Option<String> = None;
-    let mut temp_arr: Option<Vec<JsonValue>> = None; // holds arr while building it
-
-    let mut token_iter = lexed_json.iter();
-
-    while let Some(token) = token_iter.next() {
-        match token.as_str() {
-            // TODO: break this out as a separate function and then use it
-            // recursively for objects.
-            "{" | ":" | "," | "}" => (),
-            // what proper token that comes when the key is none must be new key
-            _ if key.is_none() => {
-                let stripped_token = strip_quotes(token.to_owned());
-                key = Some(stripped_token);
-            }
-            // initialize array building
-            "[" => {
-                temp_arr = Some(vec![]);
-            }
-            // handle array building
-            elem if temp_arr.is_some() => {
-                match elem {
-                    // handle closing of array
-                    "]" => {
-                        if let Some(curr_key) = key.clone() {
-                            let cloned_arr = temp_arr.unwrap().clone();
-                            json_object.insert(curr_key, JsonValue::Vec(cloned_arr));
-                            temp_arr = None;
-                            key = None;
-                        } else {
-                            panic!("Trying to push array without key initialized");
-                        }
-                    }
-                    _ => {
-                        if let Some(mut arr) = temp_arr {
-                            let typed_token = typify_token(elem.to_string());
-                            arr.push(typed_token);
-                            temp_arr = Some(arr);
-                        } else {
-                            panic!("Trying to push to unitialized array");
-                        }
-                    }
-                }
-            }
-            // handle boolean
-            "true" | "false" => {
-                if let Some(curr_key) = key.clone() {
-                    let boolean = from_str_to_bool(token.to_owned());
-                    json_object.insert(curr_key, JsonValue::Bool(boolean));
-                    key = None;
-                } else {
-                    panic!("Trying to push array without key initialized");
-                }
-            }
-            // it's a string, just pushing the entire thing should be fine
-            _ if token.chars().next().unwrap() == '\"' => {
-                if let Some(curr_key) = key.clone() {
-                    let token_as_json_value = JsonValue::String(token.to_owned());
-                    json_object.insert(curr_key, token_as_json_value);
-                    key = None;
-                } else {
-                    panic!("Trying to push array without key initialized");
-                }
-            }
-            _ if token.parse::<f64>().is_ok() => {
-                if let Some(curr_key) = key.clone() {
-                    let token_as_json_value = typify_token(token.clone());
-                    json_object.insert(curr_key, token_as_json_value);
-                    key = None;
-                } else {
-                    panic!("Trying to push array without key initialized");
-                }
-            }
-            _ => {
-                println!("Something is unimplemented...");
-                key = None;
-            }
+// TODO: Look into of it's ok to borrow and return iters like this
+fn parse_vec(iter: Iter<String>) -> (JsonValue<'static>, Iter<String>) {
+    let mut iter = iter.clone();
+    let mut arr: Vec<JsonValue> = vec![];
+    // TODO: break this out to handle nested arrays
+    while let Some(elem) = iter.next() {
+        if elem.eq("]") {
+            break;
         }
+        if elem.eq(",") {
+            continue;
+        }
+        // nested vec
+        if elem.eq("[") {
+            let (parsed_vec, return_iter) = parse_vec(iter);
+            iter = return_iter;
+            arr.push(parsed_vec);
+            continue;
+        }
+
+        let typed_elem = typify_token(elem.to_owned());
+        arr.push(typed_elem);
     }
 
-    return json_object;
+    return (JsonValue::Vec(arr), iter)
 }
 
-// fn parse_vec(iter: Iter<String>) -> JsonValue<'static> {
-//     let mut arr: Vec<JsonValue> = vec![];
-//     // TODO: break this out to handle nested arrays
-//     while let Some(elem) = iter.next() {
-//         if elem.eq("]") {
-//             break;
-//         }
-//         if elem.eq(",") {
-//             continue;
-//         }
-//         // nested vec
-//         if elem.eq("[") {
-//             let parsed_vec = parse_vec(iter);
-//             arr.push(parsed_vec);
-//         }
-
-//         let typed_elem = typify_token(elem.to_owned());
-//         arr.push(typed_elem);
-//     }
-
-//     return JsonValue::Vec(arr);
-// }
-
-fn iter_parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
-    let mut lexed_json = lexed_json.clone();
+fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
+    let lexed_json = lexed_json.clone();
 
     let mut json_object: HashMap<String, JsonValue> = HashMap::new();
     let mut token_iter = lexed_json.iter();
@@ -277,26 +195,9 @@ fn iter_parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
         if let Some(token) = token_iter.next() {
             // handle array
             if token.eq("[") {
-                let mut arr: Vec<JsonValue> = vec![];
-                // TODO: break this out to handle nested arrays
-                while let Some(elem) = token_iter.next() {
-                    if elem.eq("]") {
-                        break;
-                    }
-                    if elem.eq(",") {
-                        continue;
-                    }
-                    // // nested vec
-                    // if elem.eq("[") {
-                    //     let parsed_vec = parse_vec(token_iter);
-                    //     arr.push(parsed_vec);
-                    // }
-            
-                    let typed_elem = typify_token(elem.to_owned());
-                    arr.push(typed_elem);
-                }
-            
-                json_object.insert(key.to_owned(), JsonValue::Vec(arr));
+                let ( parsed_arr, iterator ) = parse_vec(token_iter);
+                token_iter = iterator; // give the iterator back
+                json_object.insert(key.to_owned(), parsed_arr);
                 continue;
             }
 
@@ -314,8 +215,6 @@ fn main() {
         .expect("Something went wrong when reading the file");
 
     let tokens = lexer(json_content);
-    // println!("{:?}", tokens);
-    // let json_object = parser(tokens);
-    let json_object = iter_parser(tokens);
+    let json_object = parser(tokens);
     println!("{:?}", json_object)
 }
