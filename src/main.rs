@@ -137,7 +137,9 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
     let mut key: Option<String> = None;
     let mut temp_arr: Option<Vec<JsonValue>> = None; // holds arr while building it
 
-    for token in lexed_json {
+    let mut token_iter = lexed_json.iter();
+
+    while let Some(token) = token_iter.next() {
         match token.as_str() {
             // TODO: break this out as a separate function and then use it 
             // recursively for objects. 
@@ -145,7 +147,7 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
             "{" | ":" | "," | "}" => (),
             // what proper token that comes when the key is none must be new key
             _ if key.is_none() => {
-                let stripped_token = strip_quotes(token);
+                let stripped_token = strip_quotes(token.to_owned());
                 key = Some(stripped_token);
             }
             // initialize array building
@@ -180,7 +182,7 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
             // handle boolean
             "true" | "false" => {
                 if let Some(curr_key) = key.clone() {
-                    let boolean = from_str_to_bool(token);
+                    let boolean = from_str_to_bool(token.to_owned());
                     json_object.insert(curr_key, JsonValue::Bool(boolean));
                     key = None;
                 } else {
@@ -190,7 +192,7 @@ fn parser<'a>(lexed_json: Vec<String>) -> HashMap<String, JsonValue<'a>> {
             // it's a string, just pushing the entire thing should be fine
             _ if token.chars().next().unwrap() == '\"' => {
                 if let Some(curr_key) = key.clone() {
-                    let token_as_json_value = JsonValue::String(token);
+                    let token_as_json_value = JsonValue::String(token.to_owned());
                     json_object.insert(curr_key, token_as_json_value);
                     key = None;
                 } else {
