@@ -1,32 +1,9 @@
 use std::slice::Iter;
-use std::collections::HashMap;
 use std::vec;
 use super::utils::{typify_token, strip_quotes, is_string_token};
+use super::types::{JsonValue, JsonObject};
 
 
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub enum JsonValue {
-    String(String),
-    Num(f64),
-    Vec(Vec<JsonValue>), // ok so this works! self referencing
-    Bool(bool),
-    // Object(HashMap<&'a String, JsonValue<'a>>),
-    Object(JsonObject),
-}
-
-#[derive(Debug, Clone)]
-pub struct JsonObject {
-    json: HashMap<String, JsonValue>,
-}
-
-impl JsonObject {
-    fn new() -> Self {
-        return JsonObject {
-            json: HashMap::new(),
-        };
-    }
-}
 
 fn parse_vec(iter: Iter<String>) -> (JsonValue, Iter<String>) {
     let mut iter = iter.clone();

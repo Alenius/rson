@@ -1,4 +1,4 @@
-use super::parser::JsonValue;
+use super::types::JsonValue;
 
 // a string will guaranteed start and end with quotes
 pub fn strip_quotes(string: String) -> String {
