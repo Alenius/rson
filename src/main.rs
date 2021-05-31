@@ -11,5 +11,6 @@ fn main() {
 
     let tokens = lexer::lex(json_content);
     let json_object = parser::parse(tokens);
-    println!("{:?}", json_object)
+    // println!("{:?}", json_object)
+    json_object.print();
 }

@@ -5,7 +5,6 @@ pub enum JsonValue {
     Num(f64),
     Vec(Vec<JsonValue>), // ok so this works! self referencing
     Bool(bool),
-    // Object(HashMap<&'a String, JsonValue<'a>>),
     Object(JsonObject),
 }
 
@@ -20,4 +19,12 @@ impl JsonObject {
             json: HashMap::new(),
         };
     }
+
+    pub fn print(self) {
+        let mut print_iter = self.json.clone().into_iter();
+
+        while let Some(item) = print_iter.next() {
+            println!("{:?}", item);
+        }
+    }    
 }
