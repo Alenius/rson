@@ -20,11 +20,21 @@ impl JsonObject {
         };
     }
 
-    pub fn print(self) {
+    pub fn print(&mut self) {
         let mut print_iter = self.json.clone().into_iter();
 
+        println!("{{");
         while let Some(item) = print_iter.next() {
             println!("{:?}", item);
         }
+        println!("}}");
     }    
+
+    pub fn empty(&mut self) {
+        self.json.clear();
+    }
+
+    pub fn delete_key(&mut self, key: &str) {
+        self.json.remove(key);
+    }
 }

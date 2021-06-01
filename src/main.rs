@@ -10,7 +10,10 @@ fn main() {
         .expect("Something went wrong when reading the file");
 
     let tokens = lexer::lex(json_content);
-    let json_object = parser::parse(tokens);
+    let mut json_object = parser::parse(tokens);
     // println!("{:?}", json_object)
+    json_object.print();
+    json_object.delete_key("strong");
+    println!("----");
     json_object.print();
 }
