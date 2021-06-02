@@ -10,7 +10,7 @@ pub enum JsonValue {
 
 #[derive(Debug, Clone)]
 pub struct JsonObject {
-    pub json: HashMap<String, JsonValue>,
+    json: HashMap<String, JsonValue>,
 }
 
 impl JsonObject {
@@ -36,5 +36,9 @@ impl JsonObject {
 
     pub fn delete_key(&mut self, key: &str) {
         self.json.remove(key);
+    }
+
+    pub fn insert(&mut self, key: String, value: JsonValue) {
+        self.json.insert(key, value);
     }
 }

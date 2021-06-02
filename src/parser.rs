@@ -71,7 +71,7 @@ fn parse_tokens(token_iter: Iter<String>) -> (JsonObject, Iter<String>) {
                     // returning the consumed iter
                     let (object, return_iter) = parse_tokens(token_iter);
                     token_iter = return_iter;
-                    json_object.json.insert(key, JsonValue::Object(object));
+                    json_object.insert(key, JsonValue::Object(object));
                     continue;
                 }
                 // object closed
@@ -82,13 +82,13 @@ fn parse_tokens(token_iter: Iter<String>) -> (JsonObject, Iter<String>) {
                 "[" => {
                     let (parsed_arr, iterator) = parse_vec(token_iter);
                     token_iter = iterator; // give the iterator back
-                    json_object.json.insert(key.to_owned(), parsed_arr);
+                    json_object.insert(key.to_owned(), parsed_arr);
                     continue;
                 }
                 _ => {
                     // handle numbers, strings and booleans
                     let value = typify_token(token.to_owned());
-                    json_object.json.insert(key.to_owned(), value);
+                    json_object.insert(key.to_owned(), value);
                 }
             }
         } else {
