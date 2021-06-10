@@ -11,11 +11,11 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=rson",
+                    "--bin=test",
                     "--package=rson"
                 ],
                 "filter": {
-                    "name": "rson",
+                    "name": "test",
                     "kind": "bin"
                 }
             },
