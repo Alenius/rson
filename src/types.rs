@@ -1,12 +1,22 @@
-use std::{collections::{HashMap, hash_map}, vec} ;
 use std::fmt;
+use std::{
+    collections::{hash_map, HashMap},
+    vec,
+};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+enum JsonNum {
+    Int(i64),
+    Float(f64),
+}
+
+#[derive(Clone, Debug)]
 pub enum JsonValue {
     String(String),
-    Num(f64),
-    Vec(Vec<JsonValue>), // ok so this works! self referencing
+    Num(JsonNum),
     Bool(bool),
+    Null,
+    Vec(Vec<JsonValue>), // ok so this works! self referencing
     Object(JsonObject),
 }
 
@@ -14,15 +24,21 @@ impl fmt::Display for JsonValue {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::String(str) => {
-                // I think it's clearer that it is a string if 
+                // I think it's clearer that it is a string if
                 // we print it with quotes
                 let str_with_quotes = format!("\"{}\"", str);
-                return formatter.write_str(&str_with_quotes)
+                return formatter.write_str(&str_with_quotes);
             }
-            Self::Num(float) => {
-                let output = float.to_string();
-                return formatter.write_str(&output)
-            }
+            Self::Num(num) => match num {
+                &JsonNum::Float(float) => {
+                    let output = float.to_string();
+                    return formatter.write_str(&output);
+                }
+                &JsonNum::Int(int) => {
+                    let output = int.to_string();
+                    return formatter.write_str(&output);
+                }
+            },
             Self::Vec(vec) => {
                 let mut vec_builder: Vec<String> = vec![];
 
@@ -32,8 +48,7 @@ impl fmt::Display for JsonValue {
 
                 let joined_vec = vec_builder.join(", ");
                 let final_vec = format!("[{}]", joined_vec);
-                return formatter.write_str(&final_vec)
-
+                return formatter.write_str(&final_vec);
             }
             Self::Bool(bool) => {
                 return formatter.write_str(&bool.to_string());
@@ -48,13 +63,16 @@ impl fmt::Display for JsonValue {
                 let joined_obj = obj_builder.join(",");
                 let with_brackets = format!("{{{}}}", joined_obj);
 
-                return formatter.write_str(&with_brackets)
+                return formatter.write_str(&with_brackets);
+            }
+            Self::Null => {
+                return formatter.write_str("null")
             }
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct JsonObject {
     json: HashMap<String, JsonValue>,
 }
@@ -74,7 +92,7 @@ impl JsonObject {
             println!("  \"{}\": {}", key, value);
         }
         println!("}}");
-    }    
+    }
 
     pub fn empty(&mut self) {
         self.json.clear();
@@ -89,7 +107,7 @@ impl JsonObject {
     }
 
     pub fn get_value(&self, key: &str) -> Option<&JsonValue> {
-        return self.json.get(&key.to_owned())
+        return self.json.get(&key.to_owned());
     }
 
     pub fn to_iter(&self) -> hash_map::Iter<String, JsonValue> {
