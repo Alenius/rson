@@ -1,13 +1,18 @@
 use std::collections::HashMap;
-use std::iter::Peekable;
 use std::slice::Iter;
 
-use super::annotated_lexer::{Delimiters, JsonTokenType, Token};
+use super::annotated_lexer::{Delimiters, JsonTokenType, Numbers, Token};
+
+#[derive(Debug)]
+enum JsonNum {
+    Int(i64),
+    Float(f64),
+}
 
 #[derive(Debug)]
 pub enum JsonValue {
     String(String),
-    Num(f64),
+    Num(JsonNum),
     Bool(bool),
     Null,
     Vec(Vec<JsonValue>), // ok so this works! self referencing
@@ -59,7 +64,14 @@ pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
                 key = None;
             }
             JsonTokenType::Number(num) => {
-                object.insert(key.unwrap(), JsonValue::Num(num));
+                match num {
+                    Numbers::Integer(integer) => {
+                        object.insert(key.unwrap(), JsonValue::Num(JsonNum::Int(integer)))
+                    }
+                    Numbers::Float(float) => {
+                        object.insert(key.unwrap(), JsonValue::Num(JsonNum::Float(float)))
+                    }
+                }
                 key = None;
             }
             JsonTokenType::Boolean(bool) => {
@@ -77,23 +89,41 @@ pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
                         let (partly_consumed_iter, nested_object) = parse_tokens(token_iter);
                         token_iter = partly_consumed_iter;
                         object.insert(key.unwrap(), JsonValue::Object(nested_object));
-                        return (token_iter, object)
+                        key = None;
                     }
                     Delimiters::RightBrace => panic!("Stray right brace"),
                     // array
                     Delimiters::LeftBracket => {
                         let mut vec: Vec<JsonValue> = vec![];
                         loop {
-                            match token_value.get_token() {
+                            let arr_val = token_iter.next();
+
+                            if arr_val.is_none() {
+                                panic!("Unexpected end of array");
+                            }
+                            match arr_val.unwrap().get_token() {
                                 JsonTokenType::String(string) => {
                                     vec.push(JsonValue::String(string))
                                 }
-                                JsonTokenType::Number(num) => vec.push(JsonValue::Num(num)),
+                                JsonTokenType::Number(num) => match num {
+                                    Numbers::Integer(integer) => {
+                                        vec.push(JsonValue::Num(JsonNum::Int(integer)))
+                                    }
+                                    Numbers::Float(float) => {
+                                        vec.push(JsonValue::Num(JsonNum::Float(float)))
+                                    }
+                                },
                                 JsonTokenType::Boolean(bool) => vec.push(JsonValue::Bool(bool)),
                                 JsonTokenType::Null => vec.push(JsonValue::Null),
                                 JsonTokenType::Delimiter(del) => {
-                                    // object inside array
                                     match del {
+                                        Delimiters::Comma => continue,
+                                        Delimiters::RightBracket => {
+                                            object.insert(key.unwrap(), JsonValue::Vec(vec));
+                                            key = None;
+                                            break;
+                                        }
+                                        // object inside array
                                         Delimiters::LeftBrace => {
                                             let (partly_consumed_iter, nested_object) =
                                                 parse_tokens(token_iter);
@@ -102,18 +132,23 @@ pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
 
                                             let next_token = token_iter.next();
                                             if let Some(token) = next_token {
-                                                    if let JsonTokenType::Delimiter(Delimiters::RightBracket) = token.get_token() {
-                                                        return (token_iter, object)
-                                                    } else {
-                                                        panic!("Array is not finished with right bracket")
-                                                    }
+                                                if let JsonTokenType::Delimiter(
+                                                    Delimiters::RightBracket,
+                                                ) = token.get_token()
+                                                {
+                                                    return (token_iter, object);
+                                                } else {
+                                                    panic!(
+                                                        "Array is not finished with right bracket"
+                                                    )
+                                                }
                                             }
                                         }
                                         Delimiters::RightBrace => {
                                             // should already have been consumed by the object iter
                                             panic!("Did not expect lonely right brace in array")
                                         }
-                                        Delimiters::Comma => {}
+                                        Delimiters::LeftBracket => {}
                                         _ => panic!("Not implemented nested arrays yet"),
                                     }
                                 }
@@ -130,18 +165,15 @@ pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
         if let Some(token) = finish_token {
             if let JsonTokenType::Delimiter(Delimiters::RightBrace) = token.get_token() {
                 // end of object
-                if let Some(del) = token_iter.next() {
-                    if let JsonTokenType::Delimiter(Delimiters::Comma) = del.get_token() {
-                        return (token_iter, object) 
-                    } else {
-                        panic!("Expected comma or nothing after object")
-                    }
-                }
+                return (token_iter, object);
             }
             if let JsonTokenType::Delimiter(Delimiters::Comma) = token.get_token() {
                 continue;
             } else {
-                panic!("Key value pair did not end in comma or end of input: {:?}", token)
+                panic!(
+                    "Key value pair did not end in comma or end of input: {:?}",
+                    token
+                )
             }
         } else {
             // token_iter will be depleted so this might be handled better
