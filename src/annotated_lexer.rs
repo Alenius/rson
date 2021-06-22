@@ -1,7 +1,7 @@
-use core::{panic};
+use core::panic;
 
-#[derive(Debug)]
-enum Delimiters  {
+#[derive(Debug, PartialEq, Clone)]
+pub enum Delimiters {
     LeftBrace,
     RightBrace,
     LeftBracket,
@@ -10,43 +10,62 @@ enum Delimiters  {
     Colon,
 }
 
-#[derive(Debug)]
-pub enum JsonValue {
-    String(String),
-    Num(f64),
-    Vec(Vec<JsonValue>), // ok so this works! self referencing
-    Bool(bool),
-    Whitespace(char)
-}
-
-#[derive(Debug)]
-enum TokenType {
+#[derive(Debug, PartialEq, Clone)]
+pub enum JsonTokenType {
     Delimiter(Delimiters),
-    Whitespace,
-    String,
-    Number,
-    Boolean,
+    String(String),
+    Number(f64),
+    Boolean(bool),
+    Null,
 }
 
+impl JsonTokenType {
+    fn new_left_bracket() -> JsonTokenType {
+        JsonTokenType::Delimiter(Delimiters::LeftBracket)
+    }
 
-#[derive(Debug)]
+    fn new_right_bracket() -> JsonTokenType {
+        JsonTokenType::Delimiter(Delimiters::RightBracket)
+    }
+
+    fn new_left_brace() -> JsonTokenType {
+        JsonTokenType::Delimiter(Delimiters::LeftBrace)
+    }
+
+    fn new_right_brace() -> JsonTokenType {
+        JsonTokenType::Delimiter(Delimiters::RightBrace)
+    }
+
+    fn new_comma() -> JsonTokenType {
+        JsonTokenType::Delimiter(Delimiters::Comma)
+    }
+
+    fn new_colon() -> JsonTokenType {
+        JsonTokenType::Delimiter(Delimiters::Colon)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
-    token_type: TokenType,
-    raw: String
+    token: JsonTokenType,
+    raw: String,
 }
 
 impl Token {
-    fn new(token_type: TokenType, raw: String) -> Token {
-        return Token {
-            token_type,
-            raw
-        }
-    }    
+    fn new(token: JsonTokenType, raw: String) -> Token {
+        return Token { token, raw };
+    }
+    pub fn get_token(&self) -> JsonTokenType {
+        return self.token.clone();
+    }
+
+    fn get_raw(&self) -> String {
+        return self.raw.clone();
+    }
 }
 
-
 pub fn annotated_lexer(json: String) -> Vec<Token> {
-    let mut iter = json.chars();
+    let mut iter = json.chars().peekable();
     let mut lookahead: Option<char> = iter.next();
     let mut token_vec: Vec<Token> = vec![];
     loop {
@@ -54,87 +73,129 @@ pub fn annotated_lexer(json: String) -> Vec<Token> {
             None => break,
             Some(val) => {
                 match val {
-                  '{' => token_vec.push(Token::new(TokenType::Delimiter(Delimiters::LeftBrace), '{'.to_string())),
-                  '}' => token_vec.push(Token::new(TokenType::Delimiter(Delimiters::RightBrace), '}'.to_string())),
-                  '[' => token_vec.push(Token::new(TokenType::Delimiter(Delimiters::LeftBracket), '['.to_string())),
-                  ']' => token_vec.push(Token::new(TokenType::Delimiter(Delimiters::RightBracket), ']'.to_string())),
-                  ':' => token_vec.push(Token::new(TokenType::Delimiter(Delimiters::Colon), ':'.to_string())),
-                  ',' => token_vec.push(Token::new(TokenType::Delimiter(Delimiters::Comma), ','.to_string())),
-                  '\n' | ' ' => {} // ignore whitespace
-                  // string
-                  '\"' => {
-                    let mut string_builder = String::new();
-                    string_builder.push(val); // push first quote
-                    loop {
-                        let next_val = iter.next();
-                        if let Some(val) = next_val {
-                            string_builder.push(val);
-
-                            let is_quote = val == '\"';
-                            let is_escaped_quote = string_builder.ends_with("\\\"") ;
-                            if is_quote && !is_escaped_quote {
-                                let finished_string = string_builder.to_string();
-                                token_vec.push(Token::new(TokenType::String, finished_string));
-                                break;
-                            }
-                        } else {
-                            panic!("Unexpected end of input, string not complete")
-                        }
-                        
+                    '{' => {
+                        token_vec.push(Token::new(JsonTokenType::new_left_brace(), '{'.to_string()))
                     }
-                  }
-                  // boolean and null
-                  't' | 'f' | 'n' => {
-                    let mut bool_builder = String::new();
-                    bool_builder.push(val);
-
-                    loop {
-                        let next_val = iter.next();
-                        if let Some(value) = next_val {
-                            if !value.is_alphabetic() {
-                                let finished_bool_or_null = bool_builder.to_string();  
-                                let bool_token = Token::new(TokenType::Boolean, finished_bool_or_null);
-                                token_vec.push(bool_token);
-                                break
-                            }
-                            bool_builder.push(val)
-                        } else {
-                            panic!("Unexpected end of input, incomplete boolean or null")
-                        }
-                    }
-                  }
-                  // numbers
-                  num if val.is_numeric() => {
-                      let mut num_builder = String::new();
-                      num_builder.push(num);
-
+                    '}' => token_vec.push(Token::new(
+                        JsonTokenType::new_right_brace(),
+                        '}'.to_string(),
+                    )),
+                    '[' => token_vec.push(Token::new(
+                        JsonTokenType::new_left_bracket(),
+                        '['.to_string(),
+                    )),
+                    ']' => token_vec.push(Token::new(
+                        JsonTokenType::new_right_bracket(),
+                        ']'.to_string(),
+                    )),
+                    ':' => token_vec.push(Token::new(JsonTokenType::new_colon(), ':'.to_string())),
+                    ',' => token_vec.push(Token::new(JsonTokenType::new_comma(), ','.to_string())),
+                    '\n' | ' ' => {} // ignore whitespace
+                    // string
+                    '\"' => {
+                        let mut string_builder = String::new();
+                        string_builder.push(val); // push first quote
                         loop {
                             let next_val = iter.next();
-                            if let Some(value) = next_val {
-                                let is_dot = value.eq(&'.');
-                                let is_comma = value.eq(&',');
+                            if let Some(val) = next_val {
+                                string_builder.push(val);
 
-                                // TODO: this doesn't work for hex numbers like 0xx0
-                                if !value.is_numeric() && !is_comma && !is_dot  {
-                                    let finished_number = num_builder.to_string();                                    
-                                    token_vec.push(Token::new(TokenType::Number, finished_number));
+                                let is_quote = val == '\"';
+                                let is_escaped_quote = string_builder.ends_with("\\\"");
+                                if is_quote && !is_escaped_quote {
+                                    let finished_string = string_builder.to_string();
+                                    token_vec.push(Token::new(
+                                        JsonTokenType::String(finished_string.clone()),
+                                        finished_string.clone(),
+                                    ));
                                     break;
                                 }
-                                num_builder.push(val)
+                            } else {
+                                panic!("Unexpected end of input, string not complete")
+                            }
+                        }
+                    }
+                    // boolean and null
+                    't' | 'f' | 'n' => {
+                        let mut bool_builder = String::new();
+                        bool_builder.push(val);
+
+                        loop {
+                            // peek so we don't consume the following comma
+                            let peek_next_val = iter.peek();
+                            if let Some(value) = peek_next_val {
+                                if value.is_alphabetic() {
+                                    let next_val = iter.next().unwrap();
+                                    bool_builder.push(next_val)
+                                } else {
+                                    break;
+                                }
                             } else {
                                 panic!("Unexpected end of input, incomplete boolean or null")
                             }
                         }
-                  }
-                _ => {
-                    panic!("Not implemented value, val: {}", val)
-                }
+                        let finished_bool_or_null = bool_builder.to_string();
+                        if finished_bool_or_null.eq("true") {
+                            let bool_token =
+                                Token::new(JsonTokenType::Boolean(true), finished_bool_or_null);
+                            token_vec.push(bool_token);
+                        } else if finished_bool_or_null.eq("false") {
+                            let bool_token =
+                                Token::new(JsonTokenType::Boolean(false), finished_bool_or_null);
+                            token_vec.push(bool_token);
+                        } else if finished_bool_or_null.eq("null") {
+                            let bool_token = Token::new(JsonTokenType::Null, finished_bool_or_null);
+                            token_vec.push(bool_token);
+                        } else {
+                            panic!("Incorrect token found")
+                        }
+                    }
+                    // numbers
+                    num if val.is_numeric() || val.eq(&'-') => {
+                        let mut num_builder = String::new();
+                        num_builder.push(num);
+
+                        loop {
+                            let peeked_next_val = iter.peek();
+                            if let Some(value) = peeked_next_val {
+                                let is_not_num = value.eq(&',') || value.eq(&'\n') || value.eq(&']');
+
+                                // TODO: this doesn't work for hex numbers like 0xx0
+                                if is_not_num {
+                                    let parsed_number = num_builder.parse::<f64>();
+                                    match parsed_number {
+                                        Ok(number) => {
+                                            token_vec.push(Token::new(
+                                                JsonTokenType::Number(number),
+                                                number.to_string(),
+                                            ));
+                                            break;
+                                        }
+                                        Err(e) => {
+                                            panic!(
+                                                "Something went wrong when lexing number: {:?}",
+                                                e
+                                            )
+                                        }
+                                    }
+                                }
+
+                                num_builder.push(value.to_owned());
+                                iter.next();
+                            } else {
+                                panic!("Unexpected end of input, incomplete num or null")
+                            }
+                        }
+                    }
+                    _ => {
+                        panic!("Lexer doesn't understand value: {}", val)
+                    }
                 }
             }
         }
 
-        lookahead = iter.next(); 
+        lookahead = iter.next();
     }
 
-    return token_vec
+    return token_vec;
 }
