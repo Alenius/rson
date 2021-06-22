@@ -11,10 +11,16 @@ pub enum Delimiters {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum Numbers {
+    Float(f64),
+    Integer(i64),
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum JsonTokenType {
     Delimiter(Delimiters),
     String(String),
-    Number(f64),
+    Number(Numbers),
     Boolean(bool),
     Null,
 }
@@ -158,24 +164,45 @@ pub fn annotated_lexer(json: String) -> Vec<Token> {
                         loop {
                             let peeked_next_val = iter.peek();
                             if let Some(value) = peeked_next_val {
-                                let is_not_num = value.eq(&',') || value.eq(&'\n') || value.eq(&']');
+                                let is_not_num =
+                                    value.eq(&',') || value.eq(&'\n') || value.eq(&']');
 
                                 // TODO: this doesn't work for hex numbers like 0xx0
                                 if is_not_num {
-                                    let parsed_number = num_builder.parse::<f64>();
-                                    match parsed_number {
-                                        Ok(number) => {
-                                            token_vec.push(Token::new(
-                                                JsonTokenType::Number(number),
-                                                number.to_string(),
-                                            ));
-                                            break;
+                                    let is_float = num_builder.contains(".");
+                                    if is_float {
+                                        let parsed_float = num_builder.parse::<f64>();
+                                        match parsed_float {
+                                            Ok(number) => {
+                                                token_vec.push(Token::new(
+                                                    JsonTokenType::Number(Numbers::Float(number)),
+                                                    number.to_string(),
+                                                ));
+                                                break;
+                                            }
+                                            Err(e) => {
+                                                panic!(
+                                                    "Something went wrong when lexing number: {:?}",
+                                                    e
+                                                )
+                                            }
                                         }
-                                        Err(e) => {
-                                            panic!(
-                                                "Something went wrong when lexing number: {:?}",
-                                                e
-                                            )
+                                    } else {
+                                        let parsed_int = num_builder.parse::<i64>();
+                                        match parsed_int {
+                                            Ok(number) => {
+                                                token_vec.push(Token::new(
+                                                    JsonTokenType::Number(Numbers::Integer(number)),
+                                                    number.to_string(),
+                                                ));
+                                                break;
+                                            }
+                                            Err(e) => {
+                                                panic!(
+                                                    "Something went wrong when lexing number: {:?}",
+                                                    e
+                                                )
+                                            }
                                         }
                                     }
                                 }
