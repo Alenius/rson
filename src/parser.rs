@@ -1,24 +1,6 @@
-use std::collections::HashMap;
 use std::slice::Iter;
 
 use super::lexer::{Delimiters, JsonTokenType, Numbers, Token};
-
-
-#[derive(Debug)]
-pub struct JsonObject {
-    json: HashMap<String, JsonValue>,
-}
-
-impl JsonObject {
-    fn new() -> JsonObject {
-        return JsonObject {
-            json: HashMap::new(),
-        };
-    }
-    fn insert(&mut self, key: String, val: JsonValue) {
-        self.json.insert(key, val);
-    }
-}
 
 pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
     let mut token_iter = iter.clone();
@@ -160,6 +142,22 @@ pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
                     token
                 )
             }
+        }
+
+        let finish_token = token_iter.next();
+        if let Some(token) = finish_token {
+            if let JsonTokenType::Delimiter(Delimiters::RightBrace) = token.get_token() {
+                // end of object
+                return (token_iter, object);
+            }
+            if let JsonTokenType::Delimiter(Delimiters::Comma) = token.get_token() {
+                continue;
+            } else {
+                panic!(
+                    "Key value pair did not end in comma or end of input: {:?}",
+                    token
+                )
+            }
         } else {
             // token_iter will be depleted so this might be handled better
             return (token_iter, object);
@@ -209,5 +207,37 @@ fn get_key(next_val: &Option<&Token>) -> Option<String> {
         }
     } else {
         panic!("Unexpected end of object");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn get_key_with_none() {
+        let next_val = None;
+        get_key(&next_val);
+    }
+
+    #[test]
+    fn get_key_with_string() {
+        let key = String::from("String");
+        let token = Token::new(JsonTokenType::String(key.clone()), key.clone());
+        let next_val = Some(&token);
+
+        let ret = get_key(&next_val);
+        assert_eq!(ret.is_some(), true);
+        assert_eq!(ret.unwrap(), key);
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_key_with_not_string() {
+        let token = Token::new(JsonTokenType::Delimiter(Delimiters::Comma), ",".to_string());
+        let next_val = Some(&token);
+
+        get_key(&next_val);
     }
 }

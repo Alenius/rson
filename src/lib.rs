@@ -2,7 +2,6 @@ use types::JsonObject;
 
 mod lexer;
 mod parser;
-mod utils;
 pub mod types;
 
 pub fn parse(json_content: String) -> JsonObject {

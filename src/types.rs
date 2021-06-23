@@ -5,7 +5,7 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-enum JsonNum {
+pub enum JsonNum {
     Int(i64),
     Float(f64),
 }
