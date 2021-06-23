@@ -58,7 +58,7 @@ pub struct Token {
 }
 
 impl Token {
-    fn new(token: JsonTokenType, raw: String) -> Token {
+    pub fn new(token: JsonTokenType, raw: String) -> Token {
         return Token { token, raw };
     }
     pub fn get_token(&self) -> JsonTokenType {
