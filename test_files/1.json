@@ -1,12 +1,15 @@
 {
   "string": "string",
   "string_with_number": "l33t",
-  "array": [1, 2, 3, 44, 5555],
+  "integer": 1234,
+  "float": 12.34,
+  "neg_num": -100,
   "boolean": true,
-  "false_bool": false,
-  "number": 1234,
   "object": {
     "object_str": "str",
     "object_num": 1234
-  }
+  },
+  "false_bool": false,
+  "null_key": null,
+  "array": [1, 2, 3, 44, 5555]
 }
