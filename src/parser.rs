@@ -194,3 +194,35 @@ fn get_key(next_val: &Option<&Token>) -> Option<String> {
         panic!("Unexpected end of object");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn get_key_with_none() {
+        let next_val = None;
+        get_key(&next_val);
+    }
+
+    #[test]
+    fn get_key_with_string() {
+        let key = String::from("String");
+        let token = Token::new(JsonTokenType::String(key.clone()), key.clone());
+        let next_val = Some(&token);
+
+        let ret = get_key(&next_val);
+        assert_eq!(ret.is_some(), true);
+        assert_eq!(ret.unwrap(), key);
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_key_with_not_string() {
+        let token = Token::new(JsonTokenType::Delimiter(Delimiters::Comma), ",".to_string());
+        let next_val = Some(&token);
+
+        get_key(&next_val);
+    }
+}
