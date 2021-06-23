@@ -65,9 +65,6 @@ impl Token {
         return self.token.clone();
     }
 
-    fn get_raw(&self) -> String {
-        return self.raw.clone();
-    }
 }
 
 pub fn lex(json: String) -> Vec<Token> {
