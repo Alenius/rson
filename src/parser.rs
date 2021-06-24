@@ -166,8 +166,10 @@ pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
     }
 }
 
-pub fn parse(insert_vec: Vec<Token>) -> JsonObject {
-    let mut token_vec = insert_vec.clone();
+fn remove_first_and_last_brace(mut token_vec: Vec<Token>) -> Vec<Token> {
+    if token_vec.len() == 0 {
+        return token_vec
+    }
 
     let first_token = token_vec.remove(0);
     if first_token
@@ -187,10 +189,18 @@ pub fn parse(insert_vec: Vec<Token>) -> JsonObject {
         {
             panic!(
                 "Object does not end with right brace, instead I got: {:?}",
-                first_token
+                last_token
             );
         }
     }
+
+    return token_vec;
+}
+
+pub fn parse(insert_vec: Vec<Token>) -> JsonObject {
+    let mut token_vec = insert_vec.clone();
+
+    token_vec = remove_first_and_last_brace(token_vec);
 
     let token_iter = token_vec.iter();
     let (_, json_object) = parse_tokens(token_iter);
