@@ -1,6 +1,7 @@
 use std::slice::Iter;
 
 use super::lexer::{Delimiters, JsonTokenType, Numbers, Token};
+use super::types::{ JsonObject, JsonValue, JsonNum };
 
 pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
     let mut token_iter = iter.clone();
