@@ -3,6 +3,18 @@ use std::slice::Iter;
 use super::lexer::{Delimiters, JsonTokenType, Numbers, Token};
 use super::types::{ JsonObject, JsonValue, JsonNum };
 
+fn check_colon_delimiter(token: Option<&Token>) {
+    if let Some(token) = token {
+        if let JsonTokenType::Delimiter(Delimiters::Colon) = token.get_token() {
+            {}
+        } else {
+            panic!("Did not get colon after key, instead got: {:?}", token)
+        }
+    } else {
+        panic!("Unexpected end of iter")
+    }
+}
+
 pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
     let mut token_iter = iter.clone();
     let mut object = JsonObject::new();
@@ -14,17 +26,9 @@ pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
             key = get_key(&token_iter.next());
         }
 
-        // check delimiter
-        if let Some(token) = token_iter.next() {
-            if let JsonTokenType::Delimiter(Delimiters::Colon) = token.get_token() {
-                {}
-            } else {
-                panic!("Did not get colon after key, instead got: {:?}", token)
-            }
-        }
+        check_colon_delimiter(token_iter.next());
 
         let token_value = token_iter.next().unwrap();
-
         match token_value.get_token() {
             // string
             JsonTokenType::String(string) => {
