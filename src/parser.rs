@@ -251,4 +251,29 @@ mod tests {
 
         get_key(&next_val);
     }
+
+    #[test]
+    fn remove_first_and_last_brace_with_empty_vec() {
+        let token_vec = vec![];
+        let res = remove_first_and_last_brace(token_vec);
+        assert!(res.len() == 0)
+    }
+
+    #[test]
+    #[should_panic( expected = "Object does not start with left brace, instead I got: Token { token: Boolean(true), raw: \"true\" }")]
+    fn remove_first_and_last_brace_with_no_braces() {
+        let json_token = JsonTokenType::Boolean(true);
+        let token_vec = vec![Token::new(json_token, "true".to_string())];
+        remove_first_and_last_brace(token_vec);
+    }
+
+    #[test]
+    #[should_panic( expected = "Object does not end with right brace, instead I got: Token { token: Boolean(true), raw: \"true\" }")]
+    fn remove_first_and_last_brace_with_no_last_brace() {
+        let start_token = Token::new(JsonTokenType::Delimiter(Delimiters::LeftBrace), "{".to_string());
+        let end_token = Token::new(JsonTokenType::Boolean(true), "true".to_string());
+        let token_vec = vec![start_token, end_token];
+        println!("{:?}", token_vec);
+        remove_first_and_last_brace(token_vec);
+    }
 }
