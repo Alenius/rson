@@ -4,13 +4,13 @@ use std::{
     vec,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum JsonNum {
     Int(i64),
     Float(f64),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum JsonValue {
     String(String),
     Num(JsonNum),
@@ -72,7 +72,7 @@ impl fmt::Display for JsonValue {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct JsonObject {
     json: HashMap<String, JsonValue>,
 }
@@ -107,10 +107,60 @@ impl JsonObject {
     }
 
     pub fn get_value(&self, key: &str) -> Option<&JsonValue> {
-        return self.json.get(&key.to_owned());
+        return self.json.get(key);
     }
 
     pub fn to_iter(&self) -> hash_map::Iter<String, JsonValue> {
         return self.json.iter();
+    }
+
+    pub fn get_string_value(&self, key: &str ) -> Option<&String> {
+
+        let val = self.json.get(key);
+        if val.is_none() {
+            return None;
+        }
+
+        let val = val.unwrap();
+        match val {
+            JsonValue::String(val) => {
+                return Some(val);
+            }
+            unexpected => {
+                panic!("The value for that key is not of type String, instead it is: {:?}", unexpected)
+            }
+        }
+    } 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_value() {
+        let mut obj = JsonObject::new(); 
+        obj.insert("str".to_owned(), JsonValue::String("String".to_owned()));
+
+        let val = obj.get_value("str").unwrap();
+        assert_eq!(val, &JsonValue::String("String".to_owned()));
+    }
+
+    #[test]
+    fn test_get_string_value() {
+        let mut obj = JsonObject::new(); 
+        obj.insert("str".to_owned(), JsonValue::String("String".to_owned()));
+
+        let string = obj.get_string_value("str").unwrap();
+        assert_eq!(string, "String");
+    }
+
+    #[test]
+    #[should_panic(expected = "The value for that key is not of type String, instead it is: Bool(false)")]
+    fn test_get_string_value_faulty() {
+        let mut obj = JsonObject::new(); 
+        obj.insert("str".to_owned(), JsonValue::Bool(false));
+
+        obj.get_string_value("str").unwrap();
     }
 }
