@@ -137,22 +137,6 @@ pub fn parse_tokens(iter: Iter<Token>) -> (Iter<Token>, JsonObject) {
                     token
                 )
             }
-        }
-
-        let finish_token = token_iter.next();
-        if let Some(token) = finish_token {
-            if let JsonTokenType::Delimiter(Delimiters::RightBrace) = token.get_token() {
-                // end of object
-                return (token_iter, object);
-            }
-            if let JsonTokenType::Delimiter(Delimiters::Comma) = token.get_token() {
-                continue;
-            } else {
-                panic!(
-                    "Key value pair did not end in comma or end of input: {:?}",
-                    token
-                )
-            }
         } else {
             // token_iter will be depleted so this might be handled better
             return (token_iter, object);
