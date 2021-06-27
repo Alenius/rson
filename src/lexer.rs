@@ -162,7 +162,7 @@ pub fn lex(json: String) -> Vec<Token> {
                             let peeked_next_val = iter.peek();
                             if let Some(value) = peeked_next_val {
                                 let is_not_num =
-                                    value.eq(&',') || value.eq(&'\n') || value.eq(&']');
+                                    value.eq(&',') || value.eq(&'\n') || value.eq(&']') || value.eq(&'}');
 
                                 // TODO: this doesn't work for hex numbers like 0xx0
                                 if is_not_num {
