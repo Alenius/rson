@@ -37,6 +37,12 @@ fn parse_array(mut token_iter: Iter<Token>) -> (Iter<Token>, JsonValue) {
                     Delimiters::RightBracket => {
                         return (token_iter, JsonValue::Vec(vec));
                     }
+                    // nested array
+                    Delimiters::LeftBracket => {
+                        let (partly_consumed_iter, nested_array) = parse_array(token_iter);
+                        token_iter = partly_consumed_iter;
+                        vec.push(nested_array);
+                    }
                     // object inside array
                     Delimiters::LeftBrace => {
                         let (partly_consumed_iter, nested_object) = parse_tokens(token_iter);
@@ -47,8 +53,9 @@ fn parse_array(mut token_iter: Iter<Token>) -> (Iter<Token>, JsonValue) {
                         // should already have been consumed by the object iter
                         panic!("Did not expect lonely right brace in array")
                     }
-                    Delimiters::LeftBracket => {}
-                    _ => panic!("Not implemented nested arrays yet"),
+                    unexpected => {
+                        panic!("Unexpected token: {:?}", unexpected)
+                    }
                 }
             }
         }
