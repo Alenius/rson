@@ -42,6 +42,13 @@ mod tests {
         parse(str.to_owned());
     }
 
+    #[test]
+    fn parse_object_in_vec() {
+        let str = "{
+            \"array\": [{\"key\": 1}, [3, 4]]
+        }";
+        parse(str.to_owned());
+    }
 
     #[test]
     #[should_panic(expected="Unexpected end of object")]
