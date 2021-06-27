@@ -131,6 +131,14 @@ impl JsonObject {
             }
         }
     } 
+
+    pub fn get_keys(&self) -> Vec<&String> {
+        let raw_keys = self.json.keys().into_iter();
+        let mut keys: Vec<&String> = vec![];
+
+        raw_keys.for_each(|x| keys.push(x));
+        return keys
+    }
 }
 
 #[cfg(test)]
@@ -162,5 +170,15 @@ mod tests {
         obj.insert("str".to_owned(), JsonValue::Bool(false));
 
         obj.get_string_value("str").unwrap();
+    }
+
+    #[test]
+    fn test_get_keys() {
+        let mut obj = JsonObject::new();
+        obj.insert("true".to_owned(), JsonValue::Bool(true));
+        obj.insert("false".to_owned(), JsonValue::Bool(false));
+
+        let keys = obj.get_keys();
+        assert_eq!(keys, vec![&"true".to_owned(), &"false".to_owned()]);
     }
 }
