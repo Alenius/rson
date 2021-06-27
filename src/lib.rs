@@ -14,15 +14,22 @@ pub fn parse(json_content: String) -> JsonObject {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
-    fn parse_string_only() {
+    fn parse_string_values() {
         let str = "{
             \"string\": \"I am a string\",
             \"str_with_num\": \"I am a string w1th numb3rs\"
         }";
-        println!("{:?}", parse(str.to_owned()));
+        parse(str.to_owned());
+    }
+
+    #[test]
+    fn parse_number_values() {
+        let str = "{
+            \"number\": 1337,
+            \"float\": \"13.37\"
+        }";
         parse(str.to_owned());
     }
 
@@ -51,6 +58,22 @@ mod tests {
     }
 
     #[test]
+    fn parse_object() {
+        let str = "{
+            \"object\": {\"key\": \"string value\"}
+        }";
+        parse(str.to_owned());
+    }
+
+    #[test]
+    fn parse_nested_object() {
+        let str = "{
+            \"object\": {\"key\": {\"nested_key\": \"string value\"}}
+        }";
+        parse(str.to_owned());
+    }
+
+    #[test]
     #[should_panic(expected="Unexpected end of object")]
     fn panic_on_obj_ending_with_comma() {
         let str = "{
@@ -59,4 +82,21 @@ mod tests {
         parse(str.to_owned());
     }
 
+    #[test]
+    #[should_panic(expected="Lexer doesn't understand value: =")]
+    fn panic_on_wrong_key_value_delimiter() {
+        let str = "{
+           \"key\"= \"value\",
+        }";
+        parse(str.to_owned());
+    }
+
+    #[test]
+    #[should_panic]
+    fn panic_on_comma_decimal_sign() {
+        let str = "{
+            \"num_with_comma\": 13,37
+        }";
+        parse(str.to_owned());
+    }
 }
