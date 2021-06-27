@@ -11,5 +11,7 @@
   },
   "false_bool": false,
   "null_key": null,
-  "array": [1, 2, 3, 44, 5555]
+  "array": [1, 2, 3, 44, 5555],
+  "nested_array": [[ 1, "two" ], [3, "four"]],
+  "array_with_object": [{"key": "value"}]
 }
