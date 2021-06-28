@@ -1,5 +1,7 @@
 use std::slice::Iter;
 
+use crate::types::strip_quotes;
+
 use super::lexer::{Delimiters, JsonTokenType, Numbers, Token};
 use super::types::{JsonNum, JsonObject, JsonValue};
 
@@ -190,7 +192,7 @@ fn get_key(next_val: &Option<&Token>) -> Option<String> {
     if let Some(next_key) = next_val {
         let key = next_key.get_token();
         if let JsonTokenType::String(val) = key {
-            return Some(val);
+            return Some(strip_quotes(val));
         } else {
             panic!("Expected key to be string, instead got: {:?}", key)
         }

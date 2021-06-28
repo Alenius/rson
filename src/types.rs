@@ -20,6 +20,18 @@ pub enum JsonValue {
     Object(JsonObject),
 }
 
+pub fn strip_quotes(string: String) -> String {
+    let mut string = string.clone();
+    let first_char = string.remove(0);
+    let last_char = string.pop();
+
+    if first_char.ne(&'\"') || last_char.unwrap().ne(&'\"') {
+        panic!("Tried to remove quotes on a string that wasn't quotes")
+    } else {
+        return string;
+    }
+}
+
 impl fmt::Display for JsonValue {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -65,9 +77,7 @@ impl fmt::Display for JsonValue {
 
                 return formatter.write_str(&with_brackets);
             }
-            Self::Null => {
-                return formatter.write_str("null")
-            }
+            Self::Null => return formatter.write_str("null"),
         }
     }
 }
@@ -114,8 +124,7 @@ impl JsonObject {
         return self.json.iter();
     }
 
-    pub fn get_string_value(&self, key: &str ) -> Option<&String> {
-
+    pub fn get_string_value(&self, key: &str) -> Option<&String> {
         let val = self.json.get(key);
         if val.is_none() {
             return None;
@@ -127,17 +136,20 @@ impl JsonObject {
                 return Some(val);
             }
             unexpected => {
-                panic!("The value for that key is not of type String, instead it is: {:?}", unexpected)
+                panic!(
+                    "The value for that key is not of type String, instead it is: {:?}",
+                    unexpected
+                )
             }
         }
-    } 
+    }
 
     pub fn get_keys(&self) -> Vec<&String> {
         let raw_keys = self.json.keys().into_iter();
         let mut keys: Vec<&String> = vec![];
 
         raw_keys.for_each(|x| keys.push(x));
-        return keys
+        return keys;
     }
 }
 
@@ -147,16 +159,17 @@ mod tests {
 
     #[test]
     fn test_get_value() {
-        let mut obj = JsonObject::new(); 
+        let mut obj = JsonObject::new();
         obj.insert("str".to_owned(), JsonValue::String("String".to_owned()));
 
         let val = obj.get_value("str").unwrap();
+        println!("{:?}", obj);
         assert_eq!(val, &JsonValue::String("String".to_owned()));
     }
 
     #[test]
     fn test_get_string_value() {
-        let mut obj = JsonObject::new(); 
+        let mut obj = JsonObject::new();
         obj.insert("str".to_owned(), JsonValue::String("String".to_owned()));
 
         let string = obj.get_string_value("str").unwrap();
@@ -164,9 +177,11 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "The value for that key is not of type String, instead it is: Bool(false)")]
+    #[should_panic(
+        expected = "The value for that key is not of type String, instead it is: Bool(false)"
+    )]
     fn test_get_string_value_faulty() {
-        let mut obj = JsonObject::new(); 
+        let mut obj = JsonObject::new();
         obj.insert("str".to_owned(), JsonValue::Bool(false));
 
         obj.get_string_value("str").unwrap();
